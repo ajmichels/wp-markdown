@@ -9,12 +9,7 @@
  * Author URI: http://greentiedev.com
  */
 
-if ( !function_exists( 'Markdown' ) ) {
-
-	require_once dirname( __FILE__ ) . '/php-markdown/markdown.php';
-
-}
-
+require_once dirname( __FILE__ ) . '/markdown-parser.php';
 
 class wp_markdown
 {
@@ -47,6 +42,8 @@ class wp_markdown
 	public function markdown_shortcode ( $atts, $content=null )
 	{
 
+		return $this->parse_markdown( "#heading\n* test \n* test", 'github' );
+
 		$parsed_content = '';
 
 		if ( array_key_exists( 'url', $atts ) ) {
@@ -59,7 +56,7 @@ class wp_markdown
 
 				if( !is_wp_error( $response ) ) {
 
-					$parsed_content = $this->parse_markdown( $response['body'] );
+					$parsed_content = $this->parse_markdown( $response['body'], ( array_key_exists( 'flav', $atts ) ) ? $atts['flav'] : 'default' );
 
 					set_transient( $url_hash, $parsed_content, 1800 );
 
@@ -74,9 +71,9 @@ class wp_markdown
 	}
 
 
-	private function parse_markdown ( $text )
+	private function parse_markdown ( $text, $strategy='default' )
 	{
-		return Markdown( $text );
+		return markdown_parser::transform( $text, $strategy );
 	}
 
 
