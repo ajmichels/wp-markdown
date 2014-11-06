@@ -5,84 +5,48 @@ require_once dirname( __FILE__ ) . '/markdown-strategy.php';
 class markdown_strategy_default implements markdown_strategy
 {
 
-	const MARKDOWN_VERSION = "1.0.1o"; # Sun 8 Jan 2012
+
+	/* CONSTANTS ******************************************************************************** */
+
+	const MARKDOWN_VERSION              = "1.0.1o";
+	const MARKDOWN_EMPTY_ELEMENT_SUFFIX = " />"; // Change to ">" for HTML output
+	const MARKDOWN_TAB_WIDTH            = 4; // Define the width of a tab for code blocks.
 
 
-	#
-	# Global default settings:
-	#
-
-	# Change to ">" for HTML output
-	const MARKDOWN_EMPTY_ELEMENT_SUFFIX = " />";
-
-	# Define the width of a tab for code blocks.
-	const MARKDOWN_TAB_WIDTH = 4;
-
+	/* PROPERTIES ******************************************************************************* */
 
 	# Regex to match balanced [brackets].
 	# Needed to insert a maximum bracked depth while converting to PHP.
-	private $nested_brackets_depth = 6;
+	private $nested_brackets_depth        = 6;
 	private $nested_brackets_re;
-
 	private $nested_url_parenthesis_depth = 4;
 	private $nested_url_parenthesis_re;
-
-	# Table of hash values for escaped characters:
-	private $escape_chars = '\`*_{}[]()>#+-.!';
+	private $escape_chars                 = '\`*_{}[]()>#+-.!'; // Table of hash values for escaped characters:
 	private $escape_chars_re;
-
-	# Change to ">" for HTML output.
-	private $empty_element_suffix = self::MARKDOWN_EMPTY_ELEMENT_SUFFIX;
-	private $tab_width = self::MARKDOWN_TAB_WIDTH;
-
-	# Change to `true` to disallow markup or entities.
-	private $no_markup = false;
-	private $no_entities = false;
-
-	# Predefined urls and titles for reference links and images.
-	private $predef_urls = array();
-	private $predef_titles = array();
-
-
-	# Internal hashes used during transformation.
-	private $urls = array();
-	private $titles = array();
-	private $html_hashes = array();
-
-	# Status flag to avoid invalid nesting.
-	private $in_anchor = false;
-
-	private $document_gamut = array(
-		# Strip link definitions, store in hashes.
+	private $empty_element_suffix         = self::MARKDOWN_EMPTY_ELEMENT_SUFFIX; // Change to ">" for HTML output.
+	private $tab_width                    = self::MARKDOWN_TAB_WIDTH;
+	private $no_markup                    = false; // Change to `true` to disallow markup or entities.
+	private $no_entities                  = false;
+	private $predef_urls                  = array(); // Predefined urls and titles for reference links and images.
+	private $predef_titles                = array();
+	private $urls                         = array(); // Internal hashes used during transformation.
+	private $titles                       = array();
+	private $html_hashes                  = array();
+	private $in_anchor                    = false; // Status flag to avoid invalid nesting.
+	private $document_gamut               = array( // Strip link definitions, store in hashes.
 		"stripLinkDefinitions" => 20,
-		"runBasicBlockGamut"   => 30,
-		);
-
-	private $block_gamut = array(
-	#
-	# These are all the transformations that form block-level
-	# tags like paragraphs, headers, and list items.
-	#
+		"runBasicBlockGamut"   => 30
+	);
+	private $block_gamut = array( // These are all the transformations that form block-level tags like paragraphs, headers, and list items.
 		"doHeaders"         => 10,
 		"doHorizontalRules" => 20,
 		"doLists"           => 40,
 		"doCodeBlocks"      => 50,
-		"doBlockQuotes"     => 60,
-		);
-
-
-	private $span_gamut = array(
-	#
-	# These are all the transformations that occur *within* block-level
-	# tags like paragraphs, headers, and list items.
-	#
-		# Process character escapes, code spans, and inline HTML
-		# in one shot.
-		"parseSpan"           => -30,
-
-		# Process anchor and image tags. Images must come first,
-		# because ![foo][f] looks like an anchor.
-		"doImages"            =>  10,
+		"doBlockQuotes"     => 60
+	);
+	private $span_gamut = array( // These are all the transformations that occur *within* block-level tags like paragraphs, headers, and list items.
+		"parseSpan"           => -30, // Process character escapes, code spans, and inline HTML in one shot.
+		"doImages"            =>  10, // Process anchor and image tags. Images must come first, because ![foo][f] looks like an anchor.
 		"doAnchors"           =>  20,
 
 		# Make links out of things like `<http://example.com/>`
@@ -90,10 +54,9 @@ class markdown_strategy_default implements markdown_strategy
 		# delimiters in inline links like [this](<url>).
 		"doAutoLinks"         =>  30,
 		"encodeAmpsAndAngles" =>  40,
-
 		"doItalicsAndBold"    =>  50,
 		"doHardBreaks"        =>  60,
-		);
+	);
 
 	private $list_level = 0;
 
@@ -101,17 +64,20 @@ class markdown_strategy_default implements markdown_strategy
 		''  => '(?:(?<!\*)\*(?!\*)|(?<!_)_(?!_))(?=\S|$)(?![\.,:;]\s)',
 		'*' => '(?<=\S|^)(?<!\*)\*(?!\*)',
 		'_' => '(?<=\S|^)(?<!_)_(?!_)',
-		);
+	);
+
 	private $strong_relist = array(
 		''   => '(?:(?<!\*)\*\*(?!\*)|(?<!_)__(?!_))(?=\S|$)(?![\.,:;]\s)',
 		'**' => '(?<=\S|^)(?<!\*)\*\*(?!\*)',
 		'__' => '(?<=\S|^)(?<!_)__(?!_)',
-		);
+	);
+
 	private $em_strong_relist = array(
 		''    => '(?:(?<!\*)\*\*\*(?!\*)|(?<!_)___(?!_))(?=\S|$)(?![\.,:;]\s)',
 		'***' => '(?<=\S|^)(?<!\*)\*\*\*(?!\*)',
 		'___' => '(?<=\S|^)(?<!_)___(?!_)',
-		);
+	);
+
 	private $em_strong_prepared_relist;
 
 	// String length function for detab. `_initDetab` will create a function to
@@ -1569,8 +1535,7 @@ class markdown_strategy_default implements markdown_strategy
 	 */
 	private function unhash ( $text )
 	{
-		return preg_replace_callback('/(.)\x1A[0-9]+\1/',
-			array(&$this, '_unhash_callback'), $text);
+		return preg_replace_callback( '/(.)\x1A[0-9]+\1/', array(&$this, '_unhash_callback'), $text);
 	}
 
 

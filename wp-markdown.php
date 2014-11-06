@@ -42,8 +42,6 @@ class wp_markdown
 	public function markdown_shortcode ( $atts, $content=null )
 	{
 
-		return $this->parse_markdown( "#heading\n* test \n* test", 'github' );
-
 		$parsed_content = '';
 
 		if ( array_key_exists( 'url', $atts ) ) {
